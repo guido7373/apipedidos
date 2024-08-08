@@ -3,29 +3,26 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
-const bcrypt = require('bcryptjs'); // Cambiado a bcryptjs
+const bcrypt = require('bcryptjs');
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// Obtener la URI de MongoDB desde las variables de entorno
 const uri = process.env.MONGODB_URI;
 
 if (!uri) {
   console.error('MONGODB_URI no está definida en el archivo .env');
-  process.exit(1); // Salir del proceso con error si la URI no está definida
+  process.exit(1);
 }
 
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const client = new MongoClient(uri, { useNewUrlParser: true });
 
-let collection;
 let pedidosCollection;
 let usuariosCollection;
 
-// Conectar a la base de datos y establecer la colección una vez
 async function connectToDatabase() {
   try {
     await client.connect();
@@ -35,20 +32,16 @@ async function connectToDatabase() {
     console.log('Connected to MongoDB');
   } catch (error) {
     console.error('Error connecting to MongoDB:', error);
+    process.exit(1);
   }
 }
 
 connectToDatabase();
 
-///////////////// GET OBTENER COSAS
+///////////////// RUTAS GET
 
-app.get('/', async (req, res) => {
-  try {
-    console.log("FUNCA");
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    res.status(500).json({ error: 'Error fetching data' });
-  }
+app.get('/', (req, res) => {
+  res.send('Servidor en funcionamiento');
 });
 
 app.get('/pedidos', async (req, res) => {
@@ -61,17 +54,8 @@ app.get('/pedidos', async (req, res) => {
   }
 });
 
-app.get('/login/:usuario:password', async (req, res) => {
-  try {
-    const documents = await usuariosCollection.find().toArray();
-    res.json(documents);
-  } catch (error) {
-    console.error('Error fetching data:', error);
-    res.status(500).json({ error: 'Error fetching data' });
-  }
-});
+///////////////////////// RUTAS POST
 
-///////////////////////// POST CREAR COSAS
 app.post('/nuevopedido', async (req, res) => {
   try {
     const nuevoPedido = req.body;
@@ -83,7 +67,29 @@ app.post('/nuevopedido', async (req, res) => {
   }
 });
 
-////////////////////// PUT
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await usuariosCollection.findOne({ Usuario: username });
+    if (user) {
+      const match = await bcrypt.compare(password, user.Password);
+      if (match) {
+        res.status(200).json({ message: 'Login exitoso' });
+      } else {
+        res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+      }
+    } else {
+      res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+    }
+  } catch (error) {
+    console.error('Error en el servidor:', error);
+    res.status(500).json({ message: 'Error en el servidor', error });
+  }
+});
+
+///////////////////////// RUTAS PUT
+
 app.put('/pedidos/:id', async (req, res) => {
   try {
     const pedidoId = req.params.id;
@@ -105,29 +111,7 @@ app.put('/pedidos/:id', async (req, res) => {
   }
 });
 
-//////////////////////////
-// Endpoint de login
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  try {
-    const user = await usuariosCollection.findOne({ Usuario: username });
-    if (user) {
-      const match = await bcrypt.compare(password, user.Password);
-      if (match) {
-        res.status(200).json({ message: 'Login exitoso' });
-      } else {
-        res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
-      }
-    } else {
-      res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Error en el servidor', error });
-  }
-});
-
-///////////////////////// LISTEN
+///////////////////////// INICIO DEL SERVIDOR
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
