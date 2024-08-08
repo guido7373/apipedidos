@@ -18,7 +18,7 @@ if (!uri) {
   process.exit(1);
 }
 
-const client = new MongoClient(uri, { useNewUrlParser: true });
+const client = new MongoClient(uri);
 
 let pedidosCollection;
 let usuariosCollection;
