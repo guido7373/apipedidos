@@ -3,7 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs'); // Cambiado a bcryptjs
 
 const app = express();
 const port = 5000;
